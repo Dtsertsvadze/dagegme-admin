@@ -1,6 +1,8 @@
 const TOKEN_STORAGE_KEY = 'admin_token'
 const ADMIN_STORAGE_KEY = 'admin_profile'
-const APP_BASE_URL = (import.meta.env.VITE_APP_BASE_URL || '').replace(/\/$/, '')
+const APP_BASE_URL = (
+  import.meta.env.VITE_APP_BASE_URL || 'https://api.dagegme.com'
+).replace(/\/$/, '')
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || `${APP_BASE_URL}/api`).replace(/\/$/, '')
 
 function buildUrl(path) {
