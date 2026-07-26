@@ -1,13 +1,14 @@
 /**
  * @typedef {'en' | 'ka'} Language
  * @typedef {{ en: string, ka: string }} Translation
- * @typedef {{ id: number, photo_path: string }} PhotographerPhoto
+ * @typedef {{ id: number, photo_path: string, photo_url?: string | null }} PhotographerPhoto
  * @typedef {{
  *   id: number,
  *   name?: Translation,
  *   description?: Translation | null,
  *   city?: Translation,
  *   profile_photo?: string | null,
+ *   profile_photo_url?: string | null,
  *   links?: string[],
  *   vip?: boolean,
  *   photos?: PhotographerPhoto[],

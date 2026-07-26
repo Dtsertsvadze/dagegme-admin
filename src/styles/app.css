@@ -191,6 +191,16 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
+.image-placeholder {
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  box-sizing: border-box;
+  color: var(--muted);
+  text-align: center;
+  font-size: 11px;
+}
+
 .asset-remove-button {
   position: absolute;
   top: -6px;

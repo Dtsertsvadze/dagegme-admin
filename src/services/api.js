@@ -4,24 +4,9 @@ const APP_BASE_URL = (
   import.meta.env.VITE_APP_BASE_URL || 'https://api.dagegme.com'
 ).replace(/\/$/, '')
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || `${APP_BASE_URL}/api`).replace(/\/$/, '')
-const STORAGE_URL = (import.meta.env.VITE_STORAGE_URL || `${APP_BASE_URL}/storage`).replace(/\/$/, '')
 
 function buildUrl(path) {
   return `${API_BASE_URL}${path}`
-}
-
-export function buildAssetUrl(path) {
-  if (!path) {
-    return ''
-  }
-
-  if (/^https?:\/\//i.test(path)) {
-    return path
-  }
-
-  const normalizedPath = path.replace(/^\/+/, '').replace(/^storage\//, '')
-
-  return `${STORAGE_URL}/${normalizedPath}`
 }
 
 function normalizeErrorMessage(payload, fallbackMessage) {

@@ -6,7 +6,6 @@ import {
   getTranslatedValue,
 } from '../data/adminResources.js'
 import {
-  buildAssetUrl,
   createResourceItem,
   deleteResourceItem,
   deleteResourcePhoto,
@@ -124,46 +123,30 @@ function createMultipartPayload(resource, formValues) {
   return formData
 }
 
-function extractAssetUrl(asset) {
-  if (!asset) {
-    return ''
-  }
+function ProviderImage({ src, alt = '', className = '' }) {
+  const [failedSrc, setFailedSrc] = useState('')
 
-  if (typeof asset === 'string') {
-    return buildAssetUrl(asset)
-  }
-
-  if (typeof asset === 'object') {
-    const directPath =
-      asset.photo_path ??
-      asset.url ??
-      asset.path ??
-      asset.photo ??
-      asset.profile_photo ??
-      asset.image ??
-      asset.image_url ??
-      asset.image_path ??
-      asset.file ??
-      asset.file_path
-
-    if (typeof directPath === 'string' && directPath.trim() !== '') {
-      return buildAssetUrl(directPath)
-    }
-
-    const fallbackPath = Object.values(asset).find(
-      (value) =>
-        typeof value === 'string' &&
-        value.trim() !== '' &&
-        !/^https?:\/\//i.test(value) &&
-        (value.includes('/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(value)),
+  if (!src || failedSrc === src) {
+    return (
+      <div
+        className={`image-placeholder ${className}`.trim()}
+        role="img"
+        aria-label={alt || 'No image'}
+      >
+        No image
+      </div>
     )
-
-    if (typeof fallbackPath === 'string') {
-      return buildAssetUrl(fallbackPath)
-    }
   }
 
-  return ''
+  return (
+    <img
+      className={className}
+      src={src}
+      alt={alt}
+      loading="lazy"
+      onError={() => setFailedSrc(src)}
+    />
+  )
 }
 
 function renderCurrentAsset(
@@ -175,27 +158,19 @@ function renderCurrentAsset(
 ) {
   const value = existingAssets?.[field.name] ?? item?.[field.name]
 
-  if (!value) {
-    return null
-  }
-
   if (field.type === 'files' && Array.isArray(value)) {
-    const previewUrls = value
-      .map((asset) => extractAssetUrl(asset))
-      .filter(Boolean)
-
     return (
       <div className="asset-preview-block">
         <p className="field-help">
           მიმდინარე გალერეა: {value.length} ფოტო
         </p>
-        {previewUrls.length > 0 ? (
+        {value.length > 0 ? (
           <div className="asset-preview-grid">
             {value.map((asset, index) => (
-              <div key={`${extractAssetUrl(asset)}-${index}`} className="asset-preview-item">
-                <img
+              <div key={asset?.id ?? index} className="asset-preview-item">
+                <ProviderImage
                   className="asset-preview-thumb"
-                  src={extractAssetUrl(asset)}
+                  src={asset?.photo_url}
                   alt={`${field.label} ${index + 1}`}
                 />
                 {asset?.id ? (
@@ -218,15 +193,21 @@ function renderCurrentAsset(
     )
   }
 
-  if (field.type === 'file' && typeof value === 'string') {
-    const previewUrl = extractAssetUrl(value)
+  if (field.type === 'file') {
+    const previewUrl = item?.[`${field.name}_url`]
+
+    if (!value && !previewUrl) {
+      return null
+    }
 
     return (
       <div className="asset-preview-block">
         <p className="field-help">მიმდინარე ფოტო</p>
-        {previewUrl ? (
-          <img className="asset-preview-thumb" src={previewUrl} alt={field.label} />
-        ) : null}
+        <ProviderImage
+          className="asset-preview-thumb"
+          src={previewUrl}
+          alt={field.label}
+        />
       </div>
     )
   }

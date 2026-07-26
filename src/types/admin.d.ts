@@ -9,6 +9,7 @@ export interface PhotographerPhoto {
   id: number
   photographer_id: number
   photo_path: string
+  photo_url: string | null
 }
 
 export interface ProviderRecord {
@@ -17,6 +18,7 @@ export interface ProviderRecord {
   description?: Translation | null
   city: Translation
   profile_photo: string | null
+  profile_photo_url: string | null
   links?: string[]
   vip?: boolean
   photos?: PhotographerPhoto[]
