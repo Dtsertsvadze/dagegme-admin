@@ -13,6 +13,12 @@ import {
   fetchResourceItems,
   updateResourceItem,
 } from '../services/api.js'
+import {
+  createMultipartPayload,
+  removePhotoById,
+  removeSelectedFile,
+  validateImageFiles,
+} from '../utils/resourceForm.js'
 
 function fieldValueToInput(field, value) {
   if (field.type.startsWith('translated-')) {
@@ -54,75 +60,6 @@ function createFormValues(resource, item) {
   }, initialValues)
 }
 
-function appendFormDataValue(formData, field, value) {
-  if (field.type.startsWith('translated-')) {
-    const enValue = value.en.trim()
-    const kaValue = value.ka.trim()
-
-    if (field.required || enValue !== '' || kaValue !== '') {
-      formData.append(`${field.name}[en]`, enValue)
-      formData.append(`${field.name}[ka]`, kaValue)
-    }
-    return
-  }
-
-  if (field.type === 'boolean') {
-    // FormData values are strings; Laravel validates 1/0 as booleans and the model casts them.
-    formData.append(field.name, value ? '1' : '0')
-    return
-  }
-
-  if (field.type === 'file') {
-    if (value instanceof File) {
-      formData.append(field.name, value)
-    }
-    return
-  }
-
-  if (field.type === 'files') {
-    value.forEach((file) => {
-      if (file instanceof File) {
-        formData.append(`${field.name}[]`, file)
-      }
-    })
-    return
-  }
-
-  if (field.type === 'list') {
-    value
-      .split('\n')
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .forEach((item) => {
-        formData.append(`${field.name}[]`, item)
-      })
-    return
-  }
-
-  if (field.type === 'number') {
-    if (value !== '') {
-      formData.append(field.name, String(Number(value)))
-    }
-    return
-  }
-
-  const trimmedValue = value.trim()
-
-  if (trimmedValue !== '') {
-    formData.append(field.name, trimmedValue)
-  }
-}
-
-function createMultipartPayload(resource, formValues) {
-  const formData = new FormData()
-
-  resource.fields.forEach((field) => {
-    appendFormDataValue(formData, field, formValues[field.name])
-  })
-
-  return formData
-}
-
 function ProviderImage({ src, alt = '', className = '' }) {
   const [failedSrc, setFailedSrc] = useState('')
 
@@ -154,7 +91,8 @@ function renderCurrentAsset(
   item,
   existingAssets,
   onRequestPhotoDelete,
-  isDeletingPhoto,
+  deletingPhotoId,
+  imageAltBase,
 ) {
   const value = existingAssets?.[field.name] ?? item?.[field.name]
 
@@ -166,27 +104,36 @@ function renderCurrentAsset(
         </p>
         {value.length > 0 ? (
           <div className="asset-preview-grid">
-            {value.map((asset, index) => (
-              <div key={asset?.id ?? index} className="asset-preview-item">
-                <ProviderImage
-                  className="asset-preview-thumb"
-                  src={asset?.photo_url}
-                  alt={`${field.label} ${index + 1}`}
-                />
-                {asset?.id ? (
-                  <button
-                    className="asset-remove-button"
-                    type="button"
-                    aria-label={`ფოტო ${index + 1}-ის წაშლა`}
-                    title="ფოტოს წაშლა"
-                    disabled={isDeletingPhoto}
-                    onClick={() => onRequestPhotoDelete(field, asset, index)}
-                  >
-                    ×
-                  </button>
-                ) : null}
-              </div>
-            ))}
+            {value.map((asset, index) => {
+              const isDeleting = String(deletingPhotoId) === String(asset?.id)
+
+              return (
+                <div
+                  key={asset?.id ?? index}
+                  className={`asset-preview-item${isDeleting ? ' asset-preview-item-loading' : ''}`}
+                  aria-busy={isDeleting}
+                >
+                  <ProviderImage
+                    className="asset-preview-thumb"
+                    src={asset?.photo_url}
+                    alt={`${imageAltBase} — გალერეის ფოტო ${index + 1}`}
+                  />
+                  {isDeleting ? <span className="asset-loading-label">იშლება...</span> : null}
+                  {asset?.id ? (
+                    <button
+                      className="asset-remove-button"
+                      type="button"
+                      aria-label={`${imageAltBase}-ის გალერეის ფოტო ${index + 1}-ის წაშლა`}
+                      title="ფოტოს წაშლა"
+                      disabled={isDeleting}
+                      onClick={() => onRequestPhotoDelete(field, asset, index)}
+                    >
+                      {isDeleting ? '…' : '×'}
+                    </button>
+                  ) : null}
+                </div>
+              )
+            })}
           </div>
         ) : null}
       </div>
@@ -204,9 +151,9 @@ function renderCurrentAsset(
       <div className="asset-preview-block">
         <p className="field-help">მიმდინარე ფოტო</p>
         <ProviderImage
-          className="asset-preview-thumb"
+          className="asset-preview-thumb asset-preview-single"
           src={previewUrl}
-          alt={field.label}
+          alt={`${imageAltBase} — ${field.label}`}
         />
       </div>
     )
@@ -215,20 +162,63 @@ function renderCurrentAsset(
   return null
 }
 
-function renderSelectedFiles(field, value) {
-  if (field.type === 'file' && value instanceof File) {
-    return <p className="field-help">არჩეულია: {value.name}</p>
+function SelectedImagePreview({ selection, alt, removeLabel, onRemove }) {
+  useEffect(() => {
+    const previewUrl = selection.previewUrl
+
+    return () => URL.revokeObjectURL(previewUrl)
+  }, [selection.previewUrl])
+
+  return (
+    <div className="asset-preview-item">
+      <ProviderImage
+        className="asset-preview-thumb"
+        src={selection.previewUrl}
+        alt={alt}
+      />
+      <span className="asset-preview-name" title={selection.file.name}>
+        {selection.file.name}
+      </span>
+      <button
+        className="asset-remove-button"
+        type="button"
+        aria-label={removeLabel}
+        title="არჩეული ფოტოს ამოღება"
+        onClick={onRemove}
+      >
+        ×
+      </button>
+    </div>
+  )
+}
+
+function SelectedFilePreviews({ field, value, imageAltBase, onRemove }) {
+  const selections = field.type === 'file' ? (value ? [value] : []) : value
+
+  if (!Array.isArray(selections) || selections.length === 0) {
+    return null
   }
 
-  if (field.type === 'files' && Array.isArray(value) && value.length > 0) {
-    return (
+  return (
+    <div className="asset-preview-block selected-assets-block">
       <p className="field-help">
-        არჩეულია {value.length} ფაილი
+        {field.type === 'files'
+          ? `ახალი ფოტოები: ${selections.length}`
+          : 'ახალი პროფილის ფოტო'}
       </p>
-    )
-  }
-
-  return null
+      <div className="asset-preview-grid">
+        {selections.map((selection, index) => (
+          <SelectedImagePreview
+            key={selection.previewUrl}
+            selection={selection}
+            alt={`${imageAltBase} — ახალი ${field.label} ${index + 1}`}
+            removeLabel={`${selection.file.name}-ის ამოღება`}
+            onRemove={() => onRemove(field.name, index)}
+          />
+        ))}
+      </div>
+    </div>
+  )
 }
 
 function ResourceForm({
@@ -238,12 +228,19 @@ function ResourceForm({
   formValues,
   formError,
   isSaving,
-  isDeletingPhoto,
+  deletingPhotoId,
   onChange,
+  onRemoveSelectedFile,
   onRequestPhotoDelete,
   onSubmit,
   onCancel,
 }) {
+  const imageAltBase = resource.key === 'rental-cars'
+    ? [formValues.mark, formValues.model].filter(Boolean).join(' ') || resource.singularLabel
+    : activeItem
+      ? getResourceItemTitle(resource, activeItem, 'ka')
+      : resource.singularLabel
+
   return (
     <section className="editor-card modal-card">
       <div className="editor-head">
@@ -330,9 +327,16 @@ function ResourceForm({
                       activeItem,
                       existingAssets,
                       onRequestPhotoDelete,
-                      isDeletingPhoto,
+                      deletingPhotoId,
+                      imageAltBase,
                     )}
-                    {renderSelectedFiles(field, formValues[field.name])}
+                    <SelectedFilePreviews
+                      field={field}
+                      value={formValues[field.name]}
+                      imageAltBase={imageAltBase}
+                      onRemove={onRemoveSelectedFile}
+                    />
+                    <p className="field-help">მხოლოდ გამოსახულება, მაქსიმუმ 10 MB.</p>
                   </>
                 ) : field.type === 'boolean' ? (
                   <label className="switch-control" htmlFor={field.name}>
@@ -373,7 +377,7 @@ function ResourceForm({
   )
 }
 
-function formatTableValue(field, item, displayLanguage) {
+function formatTableValue(field, item, displayLanguage, resource) {
   const value = item[field.name]
 
   if (field.type.startsWith('translated-')) {
@@ -382,6 +386,18 @@ function formatTableValue(field, item, displayLanguage) {
 
   if (field.type === 'boolean') {
     return <span className={value ? 'status-badge status-vip' : 'status-badge'}>{value ? 'VIP' : 'სტანდარტული'}</span>
+  }
+
+  if (field.type === 'file') {
+    const itemTitle = getResourceItemTitle(resource, item, displayLanguage)
+
+    return (
+      <ProviderImage
+        className="table-thumbnail"
+        src={item[`${field.name}_url`]}
+        alt={`${itemTitle} — ${field.label}`}
+      />
+    )
   }
 
   return value || '-'
@@ -411,7 +427,7 @@ function ResourcePage({ resourceKey }) {
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [pendingPhotoDelete, setPendingPhotoDelete] = useState(null)
   const [photoDeleteError, setPhotoDeleteError] = useState('')
-  const [isDeletingPhoto, setIsDeletingPhoto] = useState(false)
+  const [deletingPhotoId, setDeletingPhotoId] = useState(null)
   const [activeItemId, setActiveItemId] = useState(null)
   const [existingAssets, setExistingAssets] = useState({})
   const [formValues, setFormValues] = useState(() =>
@@ -457,8 +473,15 @@ function ResourcePage({ resourceKey }) {
     return null
   }
 
-  const tableFields = resource.fields.filter((field) => field.table)
+  const tableFields = resource.fields
+    .filter((field) => field.table)
+    .sort(
+      (leftField, rightField) =>
+        Number(rightField.name === 'profile_photo') -
+        Number(leftField.name === 'profile_photo'),
+    )
   const activeItem = items.find((item) => item.id === activeItemId) ?? null
+  const isDeletingPhoto = deletingPhotoId !== null
 
   function handleCreateClick() {
     setIsEditorOpen(true)
@@ -476,7 +499,7 @@ function ResourcePage({ resourceKey }) {
   }
 
   function handleCancelPhotoDelete() {
-    if (isDeletingPhoto) {
+    if (deletingPhotoId !== null) {
       return
     }
 
@@ -490,7 +513,7 @@ function ResourcePage({ resourceKey }) {
     }
 
     const { field, photo } = pendingPhotoDelete
-    setIsDeletingPhoto(true)
+    setDeletingPhotoId(photo.id)
     setPhotoDeleteError('')
 
     try {
@@ -499,18 +522,14 @@ function ResourcePage({ resourceKey }) {
 
       setExistingAssets((current) => ({
         ...current,
-        [field.name]: (current[field.name] ?? []).filter(
-          (asset) => asset.id !== deletedPhotoId,
-        ),
+        [field.name]: removePhotoById(current[field.name] ?? [], deletedPhotoId),
       }))
       setItems((current) =>
         current.map((item) =>
           item.id === activeItem.id
             ? {
                 ...item,
-                [field.name]: Array.isArray(item[field.name])
-                  ? item[field.name].filter((asset) => asset.id !== deletedPhotoId)
-                  : item[field.name],
+                [field.name]: removePhotoById(item[field.name], deletedPhotoId),
               }
             : item,
         ),
@@ -519,7 +538,7 @@ function ResourcePage({ resourceKey }) {
     } catch (error) {
       setPhotoDeleteError(error.message)
     } finally {
-      setIsDeletingPhoto(false)
+      setDeletingPhotoId(null)
     }
   }
 
@@ -527,10 +546,28 @@ function ResourcePage({ resourceKey }) {
     const { checked, dataset, files, name, type, value, multiple } = event.target
 
     if (type === 'file') {
+      const selectedFiles = Array.from(files ?? [])
+      const validationError = validateImageFiles(selectedFiles)
+
+      event.target.value = ''
+
+      if (validationError) {
+        setFormError(validationError)
+        return
+      }
+
+      const selections = selectedFiles.map((file) => ({
+        file,
+        previewUrl: URL.createObjectURL(file),
+      }))
+
       setFormValues((current) => ({
         ...current,
-        [name]: multiple ? Array.from(files ?? []) : (files?.[0] ?? null),
+        [name]: multiple
+          ? [...(current[name] ?? []), ...selections]
+          : (selections[0] ?? null),
       }))
+      setFormError('')
       return
     }
 
@@ -559,6 +596,10 @@ function ResourcePage({ resourceKey }) {
     }))
   }
 
+  function handleRemoveSelectedFile(fieldName, index) {
+    setFormValues((current) => removeSelectedFile(current, fieldName, index))
+  }
+
   async function handleEdit(item) {
     setPageError('')
 
@@ -573,6 +614,11 @@ function ResourcePage({ resourceKey }) {
 
     setIsEditorOpen(true)
     setActiveItemId(detailedItem.id)
+    setItems((current) =>
+      current.map((entry) =>
+        entry.id === detailedItem.id ? { ...entry, ...detailedItem } : entry,
+      ),
+    )
     setExistingAssets(
       resource.fields.reduce((assets, field) => {
         if (field.type === 'files') {
@@ -632,7 +678,20 @@ function ResourcePage({ resourceKey }) {
         ? await updateResourceItem(resource, activeItem.id, payload)
         : await createResourceItem(resource, payload)
 
-      const nextItem = savedItem?.data ?? savedItem
+      const responseItem = savedItem?.data ?? savedItem
+      const nextItem = activeItem
+        ? { ...activeItem, ...responseItem }
+        : responseItem
+
+      if (activeItem) {
+        resource.fields
+          .filter((field) => field.type === 'files')
+          .forEach((field) => {
+            if (!Array.isArray(responseItem?.[field.name])) {
+              nextItem[field.name] = existingAssets[field.name] ?? []
+            }
+          })
+      }
 
       setItems((current) => {
         if (activeItem) {
@@ -695,7 +754,9 @@ function ResourcePage({ resourceKey }) {
                     {items.map((item) => (
                       <tr key={item.id}>
                         {tableFields.map((field) => (
-                          <td key={field.name}>{formatTableValue(field, item, displayLanguage)}</td>
+                          <td key={field.name}>
+                            {formatTableValue(field, item, displayLanguage, resource)}
+                          </td>
                         ))}
                         <td>
                           <div className="row-actions">
@@ -751,7 +812,7 @@ function ResourcePage({ resourceKey }) {
                       {tableFields.map((field) => (
                         <div key={field.name}>
                           <dt>{field.label}</dt>
-                          <dd>{formatTableValue(field, item, displayLanguage)}</dd>
+                          <dd>{formatTableValue(field, item, displayLanguage, resource)}</dd>
                         </div>
                       ))}
                     </dl>
@@ -779,8 +840,9 @@ function ResourcePage({ resourceKey }) {
               formValues={formValues}
               formError={formError}
               isSaving={isSaving}
-              isDeletingPhoto={isDeletingPhoto}
+              deletingPhotoId={deletingPhotoId}
               onChange={handleFieldChange}
+              onRemoveSelectedFile={handleRemoveSelectedFile}
               onRequestPhotoDelete={handleRequestPhotoDelete}
               onSubmit={handleSubmit}
               onCancel={handleCloseEditor}
@@ -805,7 +867,7 @@ function ResourcePage({ resourceKey }) {
           >
             <h3 id="photo-delete-title">ფოტოს წაშლა</h3>
             <p id="photo-delete-description">
-              ნამდვილად გსურთ გალერეიდან ფოტოs წაშლა?
+              ნამდვილად გსურთ გალერეიდან ფოტოს წაშლა?
             </p>
 
             {photoDeleteError ? <div className="form-error">{photoDeleteError}</div> : null}

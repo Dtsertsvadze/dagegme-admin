@@ -1,24 +1,21 @@
 import { getStoredToken } from './auth.js'
 
+const VITE_ENV = import.meta.env ?? {}
 const APP_BASE_URL = (
-  import.meta.env.VITE_APP_BASE_URL || 'https://api.dagegme.com'
+  VITE_ENV.VITE_APP_BASE_URL || 'https://api.dagegme.com'
 ).replace(/\/$/, '')
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || `${APP_BASE_URL}/api`).replace(/\/$/, '')
+const API_BASE_URL = (VITE_ENV.VITE_API_BASE_URL || `${APP_BASE_URL}/api`).replace(/\/$/, '')
 
 function buildUrl(path) {
   return `${API_BASE_URL}${path}`
 }
 
 function normalizeErrorMessage(payload, fallbackMessage) {
-  if (payload?.message) {
-    return payload.message
-  }
-
   const firstValidationError = payload?.errors
     ? Object.values(payload.errors).flat().find(Boolean)
     : null
 
-  return firstValidationError ?? fallbackMessage
+  return firstValidationError ?? payload?.message ?? fallbackMessage
 }
 
 async function request(path, options = {}) {
@@ -72,8 +69,10 @@ export async function fetchResourceItems(resource) {
   return []
 }
 
-export function fetchResourceItem(resource, itemId) {
-  return request(`${resource.publicPath}/${itemId}`)
+export async function fetchResourceItem(resource, itemId) {
+  const payload = await request(`${resource.publicPath}/${itemId}`)
+
+  return payload?.data ?? payload
 }
 
 export function createResourceItem(resource, values) {

@@ -1,7 +1,7 @@
 /**
  * @typedef {'en' | 'ka'} Language
  * @typedef {{ en: string, ka: string }} Translation
- * @typedef {{ id: number, photo_path: string, photo_url?: string | null }} PhotographerPhoto
+ * @typedef {{ id: number, photo_path: string, photo_url?: string | null }} GalleryPhoto
  * @typedef {{
  *   id: number,
  *   name?: Translation,
@@ -11,7 +11,7 @@
  *   profile_photo_url?: string | null,
  *   links?: string[],
  *   vip?: boolean,
- *   photos?: PhotographerPhoto[],
+ *   photos?: GalleryPhoto[],
  *   mark?: string,
  *   model?: string,
  *   year?: number
@@ -195,6 +195,13 @@ export const adminResources = [
         name: "profile_photo",
         label: "პროფილის ფოტო",
         type: "file",
+        accept: "image/*",
+        table: true,
+      },
+      {
+        name: "photos",
+        label: "გალერეის ფოტოები",
+        type: "files",
         accept: "image/*",
       },
     ],

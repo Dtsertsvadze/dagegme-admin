@@ -5,11 +5,17 @@ export interface Translation {
   ka: string
 }
 
-export interface PhotographerPhoto {
+export interface GalleryPhoto {
   id: number
-  photographer_id: number
+  photographer_id?: number
+  rental_car_id?: number
   photo_path: string
   photo_url: string | null
+}
+
+export interface SelectedImageFile {
+  file: File
+  previewUrl: string
 }
 
 export interface ProviderRecord {
@@ -21,7 +27,7 @@ export interface ProviderRecord {
   profile_photo_url: string | null
   links?: string[]
   vip?: boolean
-  photos?: PhotographerPhoto[]
+  photos?: GalleryPhoto[]
   mark?: string
   model?: string
   year?: number
@@ -31,10 +37,10 @@ export interface ProviderFormValues {
   name?: Translation
   description?: Translation
   city: Translation
-  profile_photo: File | null
+  profile_photo: SelectedImageFile | null
   links?: string
   vip?: boolean
-  photos?: File[]
+  photos?: SelectedImageFile[]
   mark?: string
   model?: string
   year?: string
