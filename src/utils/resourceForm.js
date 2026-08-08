@@ -1,5 +1,3 @@
-export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024
-
 function selectedFile(value) {
   return value?.file instanceof File ? value.file : value
 }
@@ -8,10 +6,6 @@ export function validateImageFiles(files) {
   for (const file of files) {
     if (!(file instanceof File) || !file.type.startsWith('image/')) {
       return `${file?.name || 'არჩეული ფაილი'} არ არის სწორი გამოსახულება.`
-    }
-
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      return `${file.name} აღემატება 10 MB-ს.`
     }
   }
 

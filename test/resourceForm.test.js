@@ -10,7 +10,6 @@ import {
   updateResourceItem,
 } from '../src/services/api.js'
 import {
-  MAX_IMAGE_SIZE_BYTES,
   createMultipartPayload,
   removePhotoById,
   removeSelectedFile,
@@ -92,19 +91,14 @@ test('new gallery selections are the only photos included in an update payload',
   assert.deepEqual(payload.getAll('photos[]'), [newPhoto])
 })
 
-test('image validation accepts 10 MB and rejects oversized or non-image files', () => {
-  const maximumImage = imageFile(
-    'maximum.jpg',
-    new Uint8Array(MAX_IMAGE_SIZE_BYTES),
-  )
-  const oversizedImage = imageFile(
-    'oversized.jpg',
-    new Uint8Array(MAX_IMAGE_SIZE_BYTES + 1),
+test('image validation accepts large images and rejects non-image files', () => {
+  const largeImage = imageFile(
+    'large.jpg',
+    new Uint8Array(12 * 1024 * 1024),
   )
   const textFile = new File(['not an image'], 'notes.txt', { type: 'text/plain' })
 
-  assert.equal(validateImageFiles([maximumImage]), '')
-  assert.match(validateImageFiles([oversizedImage]), /10 MB/)
+  assert.equal(validateImageFiles([largeImage]), '')
   assert.match(validateImageFiles([textFile]), /არ არის სწორი გამოსახულება/)
 })
 
