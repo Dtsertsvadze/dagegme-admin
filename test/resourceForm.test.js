@@ -47,6 +47,21 @@ test('rental cars expose profile and gallery image fields', () => {
   assert.equal(galleryField.accept, 'image/*')
 })
 
+test('DJs expose a bilingual description field and include it in the payload', () => {
+  const resource = getResourceDefinition('djs')
+  const descriptionField = resource.fields.find((field) => field.name === 'description')
+  const values = createInitialFormValues(resource)
+  const payload = createMultipartPayload(resource, {
+    ...values,
+    description: { en: 'English description', ka: 'ქართული აღწერა' },
+  })
+
+  assert.equal(descriptionField.type, 'translated-textarea')
+  assert.deepEqual(values.description, { en: '', ka: '' })
+  assert.equal(payload.get('description[en]'), 'English description')
+  assert.equal(payload.get('description[ka]'), 'ქართული აღწერა')
+})
+
 test('create payload sends the profile image and every gallery image with Laravel keys', () => {
   const { resource, values } = rentalCarValues()
   const profilePhoto = imageFile('profile.jpg')

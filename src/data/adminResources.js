@@ -121,6 +121,7 @@ export const adminResources = [
         type: "file",
         accept: "image/*",
       },
+      translatedTextarea("description", "აღწერა"),
       { name: "links", label: "ბმულები", type: "list" },
     ],
   },
