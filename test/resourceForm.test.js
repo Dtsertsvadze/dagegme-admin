@@ -62,6 +62,23 @@ test('DJs expose a bilingual description field and include it in the payload', (
   assert.equal(payload.get('description[ka]'), 'ქართული აღწერა')
 })
 
+test('DJs, presenters, and halls expose VIP controls and serialize their status', () => {
+  for (const resourceKey of ['djs', 'presenters', 'halls']) {
+    const resource = getResourceDefinition(resourceKey)
+    const vipField = resource.fields.find((field) => field.name === 'vip')
+    const values = createInitialFormValues(resource)
+
+    assert.equal(vipField.type, 'boolean')
+    assert.equal(vipField.table, true)
+    assert.equal(values.vip, false)
+    assert.equal(
+      createMultipartPayload(resource, { ...values, vip: true }).get('vip'),
+      '1',
+    )
+    assert.equal(createMultipartPayload(resource, values).get('vip'), '0')
+  }
+})
+
 test('create payload sends the profile image and every gallery image with Laravel keys', () => {
   const { resource, values } = rentalCarValues()
   const profilePhoto = imageFile('profile.jpg')

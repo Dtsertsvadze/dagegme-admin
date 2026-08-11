@@ -115,6 +115,7 @@ export const adminResources = [
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
       translatedText("city", "ქალაქი", { required: true, table: true }),
+      vipField,
       {
         name: "profile_photo",
         label: "პროფილის ფოტო",
@@ -135,6 +136,7 @@ export const adminResources = [
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
       translatedText("city", "ქალაქი", { required: true, table: true }),
+      vipField,
       {
         name: "profile_photo",
         label: "პროფილის ფოტო",
@@ -154,6 +156,7 @@ export const adminResources = [
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
       translatedText("city", "ქალაქი", { required: true, table: true }),
+      vipField,
       {
         name: "profile_photo",
         label: "პროფილის ფოტო",
