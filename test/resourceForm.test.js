@@ -35,15 +35,28 @@ function rentalCarValues() {
   }
 }
 
-test('rental cars expose profile and gallery image fields', () => {
-  const resource = getResourceDefinition('rental-cars')
-  const profileField = resource.fields.find((field) => field.name === 'profile_photo')
-  const galleryField = resource.fields.find((field) => field.name === 'photos')
+test('bands, studios, and rental cars expose gallery image fields', () => {
+  for (const resourceKey of ['bands', 'studios', 'rental-cars']) {
+    const resource = getResourceDefinition(resourceKey)
+    const galleryField = resource.fields.find((field) => field.name === 'photos')
+    const values = createInitialFormValues(resource)
+    const galleryPhoto = imageFile(`${resourceKey}.jpg`)
+    const payload = createMultipartPayload(resource, {
+      ...values,
+      photos: [{ file: galleryPhoto, previewUrl: `blob:${resourceKey}` }],
+    })
 
-  assert.equal(profileField.type, 'file')
-  assert.equal(profileField.table, true)
-  assert.equal(galleryField.type, 'files')
-  assert.equal(galleryField.accept, 'image/*')
+    assert.equal(galleryField.type, 'files')
+    assert.equal(galleryField.accept, 'image/*')
+    assert.deepEqual(values.photos, [])
+    assert.deepEqual(payload.getAll('photos[]'), [galleryPhoto])
+  }
+
+  const rentalCarProfileField = getResourceDefinition('rental-cars').fields
+    .find((field) => field.name === 'profile_photo')
+
+  assert.equal(rentalCarProfileField.type, 'file')
+  assert.equal(rentalCarProfileField.table, true)
 })
 
 test('DJs expose a bilingual description field and include it in the payload', () => {
@@ -142,8 +155,10 @@ test('removing one existing photo or one local selection leaves the others untou
   )
 })
 
-test('multipart creates and updates are authenticated and photo deletion uses DELETE', async () => {
+test('multipart creates and updates are authenticated and gallery deletion uses resource routes', async () => {
   const resource = getResourceDefinition('rental-cars')
+  const bandResource = getResourceDefinition('bands')
+  const studioResource = getResourceDefinition('studios')
   const requests = []
   const originalFetch = globalThis.fetch
   const originalLocalStorage = globalThis.localStorage
@@ -170,6 +185,8 @@ test('multipart creates and updates are authenticated and photo deletion uses DE
     await createResourceItem(resource, createPayload)
     await updateResourceItem(resource, 1, updatePayload)
     await deleteResourcePhoto(resource, 1, 10)
+    await deleteResourcePhoto(bandResource, 2, 20)
+    await deleteResourcePhoto(studioResource, 3, 30)
   } finally {
     globalThis.fetch = originalFetch
     globalThis.localStorage = originalLocalStorage
@@ -189,6 +206,16 @@ test('multipart creates and updates are authenticated and photo deletion uses DE
   )
   assert.equal(requests[2].options.method, 'DELETE')
   assert.equal(requests[2].options.headers.Authorization, 'Bearer test-token')
+  assert.equal(
+    requests[3].url,
+    'https://api.dagegme.com/api/admin/bands/2/photos/20',
+  )
+  assert.equal(requests[3].options.method, 'DELETE')
+  assert.equal(
+    requests[4].url,
+    'https://api.dagegme.com/api/admin/studios/3/photos/30',
+  )
+  assert.equal(requests[4].options.method, 'DELETE')
 })
 
 test('authentication and API validation messages remain available to the form', async () => {

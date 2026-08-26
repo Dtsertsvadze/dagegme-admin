@@ -99,6 +99,12 @@ export const adminResources = [
       },
       translatedTextarea("description", "აღწერა"),
       { name: "links", label: "ბმულები", type: "list" },
+      {
+        name: "photos",
+        label: "გალერეის ფოტოები",
+        type: "files",
+        accept: "image/*",
+      },
     ],
   },
   {
@@ -157,6 +163,12 @@ export const adminResources = [
         accept: "image/*",
       },
       translatedTextarea("description", "აღწერა"),
+      {
+        name: "photos",
+        label: "გალერეის ფოტოები",
+        type: "files",
+        accept: "image/*",
+      },
     ],
   },
   {

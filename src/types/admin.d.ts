@@ -7,8 +7,10 @@ export interface Translation {
 
 export interface GalleryPhoto {
   id: number
+  band_id?: number
   photographer_id?: number
   rental_car_id?: number
+  studio_id?: number
   photo_path: string
   photo_url: string | null
 }
