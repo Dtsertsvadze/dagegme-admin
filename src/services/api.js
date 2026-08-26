@@ -47,9 +47,14 @@ async function request(path, options = {}) {
   const payload = await response.json().catch(() => null)
 
   if (!response.ok) {
-    throw new Error(
+    const error = new Error(
       normalizeErrorMessage(payload, 'მოთხოვნის შესრულება ვერ მოხერხდა.'),
     )
+
+    error.status = response.status
+    error.validationErrors = payload?.errors ?? {}
+
+    throw error
   }
 
   return payload
@@ -73,6 +78,20 @@ export async function fetchResourceItem(resource, itemId) {
   const payload = await request(`${resource.publicPath}/${itemId}`)
 
   return payload?.data ?? payload
+}
+
+export async function fetchVips() {
+  const payload = await request('/vips')
+
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  if (Array.isArray(payload?.data)) {
+    return payload.data
+  }
+
+  return []
 }
 
 export function createResourceItem(resource, values) {

@@ -162,9 +162,21 @@
   color: #68736f;
 }
 
+.field input[aria-invalid='true'] {
+  border-color: rgba(239, 128, 111, 0.72);
+  box-shadow: 0 0 0 4px rgba(239, 128, 111, 0.1);
+}
+
 .field-help {
   font-size: 13px;
   color: var(--muted);
+}
+
+.field-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .asset-preview-block {
@@ -476,6 +488,100 @@
   display: grid;
 }
 
+.vip-order-card {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid rgba(85, 184, 176, 0.24);
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(85, 184, 176, 0.1), transparent 45%),
+    rgba(23, 32, 34, 0.9);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.24);
+}
+
+.vip-order-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.vip-order-head h3 {
+  margin-bottom: 6px;
+  font-size: 24px;
+}
+
+.vip-order-head p,
+.vip-order-empty {
+  color: var(--muted);
+}
+
+.vip-order-count,
+.vip-position-badge {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(85, 184, 176, 0.15);
+  color: var(--brand);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.vip-order-count {
+  padding: 7px 10px;
+}
+
+.vip-order-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+}
+
+.vip-order-item {
+  display: grid;
+  grid-template-columns: auto 52px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(9, 14, 15, 0.46);
+}
+
+.vip-position-badge {
+  min-width: 34px;
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.vip-provider-image {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.vip-provider-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.vip-provider-copy span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.vip-provider-copy strong {
+  overflow: hidden;
+  color: var(--heading);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .table-card,
 .editor-card,
 .mobile-card {
@@ -691,6 +797,7 @@
   }
 
   .resource-header,
+  .vip-order-head,
   .table-head,
   .editor-head,
   .mobile-card-head {

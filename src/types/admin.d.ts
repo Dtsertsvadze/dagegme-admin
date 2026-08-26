@@ -28,6 +28,7 @@ export interface ProviderRecord {
   profile_photo_url: string | null
   links?: string[]
   vip?: boolean
+  vip_order?: number | null
   photos?: GalleryPhoto[]
   mark?: string
   model?: string
@@ -40,8 +41,25 @@ export interface ProviderFormValues {
   profile_photo: SelectedImageFile | null
   links?: string
   vip?: boolean
+  vip_order?: number | string
   photos?: SelectedImageFile[]
   mark?: string
   model?: string
   year?: string
+}
+
+export type VipProviderType =
+  | 'photographer'
+  | 'videographer'
+  | 'band'
+  | 'dj'
+  | 'presenter'
+  | 'studio'
+
+export interface VipItem {
+  provider_type: VipProviderType
+  provider: ProviderRecord & {
+    vip: true
+    vip_order: number
+  }
 }

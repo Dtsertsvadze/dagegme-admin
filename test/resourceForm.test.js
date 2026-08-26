@@ -7,6 +7,7 @@ import {
 import {
   createResourceItem,
   deleteResourcePhoto,
+  fetchVips,
   updateResourceItem,
 } from '../src/services/api.js'
 import {
@@ -14,6 +15,7 @@ import {
   removePhotoById,
   removeSelectedFile,
   validateImageFiles,
+  validateVipPosition,
 } from '../src/utils/resourceForm.js'
 
 function imageFile(name, contents = 'image', type = 'image/jpeg') {
@@ -74,21 +76,59 @@ test('DJs expose a bilingual description field and include it in the payload', (
   assert.equal(payload.get('description[ka]'), 'ქართული აღწერა')
 })
 
-test('DJs, presenters, and studios expose VIP controls and serialize their status', () => {
-  for (const resourceKey of ['djs', 'presenters', 'studios']) {
+test('all providers except rental cars expose VIP position controls', () => {
+  for (const resourceKey of [
+    'photographers',
+    'videographers',
+    'bands',
+    'djs',
+    'presenters',
+    'studios',
+  ]) {
     const resource = getResourceDefinition(resourceKey)
     const vipField = resource.fields.find((field) => field.name === 'vip')
+    const vipOrderField = resource.fields.find((field) => field.name === 'vip_order')
     const values = createInitialFormValues(resource)
 
     assert.equal(vipField.type, 'boolean')
     assert.equal(vipField.table, true)
+    assert.equal(vipOrderField.type, 'number')
+    assert.equal(vipOrderField.min, 1)
+    assert.equal(vipOrderField.step, 1)
+    assert.equal(vipOrderField.table, true)
     assert.equal(values.vip, false)
+    assert.equal(values.vip_order, '')
     assert.equal(
-      createMultipartPayload(resource, { ...values, vip: true }).get('vip'),
+      createMultipartPayload(resource, { ...values, vip: true, vip_order: '3' }).get('vip'),
       '1',
     )
-    assert.equal(createMultipartPayload(resource, values).get('vip'), '0')
+    assert.equal(
+      createMultipartPayload(resource, { ...values, vip: true, vip_order: '3' }).get('vip_order'),
+      '3',
+    )
+
+    const disabledPayload = createMultipartPayload(resource, {
+      ...values,
+      vip: false,
+      vip_order: '3',
+    })
+
+    assert.equal(disabledPayload.get('vip'), '0')
+    assert.equal(disabledPayload.has('vip_order'), false)
   }
+
+  const rentalCar = getResourceDefinition('rental-cars')
+
+  assert.equal(rentalCar.fields.some((field) => field.name === 'vip'), false)
+  assert.equal(rentalCar.fields.some((field) => field.name === 'vip_order'), false)
+})
+
+test('VIP position validation requires positive integers only while VIP is enabled', () => {
+  assert.equal(validateVipPosition({ vip: false, vip_order: '' }), '')
+  assert.match(validateVipPosition({ vip: true, vip_order: '' }), /required/)
+  assert.match(validateVipPosition({ vip: true, vip_order: '0' }), /positive integer/)
+  assert.match(validateVipPosition({ vip: true, vip_order: '1.5' }), /positive integer/)
+  assert.equal(validateVipPosition({ vip: true, vip_order: '1' }), '')
 })
 
 test('create payload sends the profile image and every gallery image with Laravel keys', () => {
@@ -155,6 +195,42 @@ test('removing one existing photo or one local selection leaves the others untou
   )
 })
 
+test('the global VIP list is fetched from the public ordered endpoint', async () => {
+  const originalFetch = globalThis.fetch
+  const originalLocalStorage = globalThis.localStorage
+  const requests = []
+  const vipItems = [
+    {
+      provider_type: 'band',
+      provider: {
+        id: 7,
+        name: { en: 'Band', ka: 'ბენდი' },
+        vip: true,
+        vip_order: 1,
+      },
+    },
+  ]
+
+  globalThis.localStorage = { getItem: () => '' }
+  globalThis.fetch = async (url, options) => {
+    requests.push({ url, options })
+    return new Response(JSON.stringify(vipItems), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  try {
+    assert.deepEqual(await fetchVips(), vipItems)
+  } finally {
+    globalThis.fetch = originalFetch
+    globalThis.localStorage = originalLocalStorage
+  }
+
+  assert.equal(requests[0].url, 'https://api.dagegme.com/api/vips')
+  assert.equal(requests[0].options.method, 'GET')
+})
+
 test('multipart creates and updates are authenticated and gallery deletion uses resource routes', async () => {
   const resource = getResourceDefinition('rental-cars')
   const bandResource = getResourceDefinition('bands')
@@ -219,14 +295,14 @@ test('multipart creates and updates are authenticated and gallery deletion uses 
 })
 
 test('authentication and API validation messages remain available to the form', async () => {
-  const resource = getResourceDefinition('rental-cars')
+  const resource = getResourceDefinition('bands')
   const originalFetch = globalThis.fetch
   const originalLocalStorage = globalThis.localStorage
   const responses = [
     new Response(
       JSON.stringify({
         message: 'The given data was invalid.',
-        errors: { 'photos.0': ['The photos.0 must be an image.'] },
+        errors: { vip_order: ['VIP position 1 is already assigned.'] },
       }),
       {
         status: 422,
@@ -245,7 +321,14 @@ test('authentication and API validation messages remain available to the form', 
   try {
     await assert.rejects(
       createResourceItem(resource, new FormData()),
-      /The photos\.0 must be an image\./,
+      (error) => {
+        assert.equal(error.message, 'VIP position 1 is already assigned.')
+        assert.equal(error.status, 422)
+        assert.deepEqual(error.validationErrors, {
+          vip_order: ['VIP position 1 is already assigned.'],
+        })
+        return true
+      },
     )
     await assert.rejects(
       deleteResourcePhoto(resource, 1, 10),

@@ -12,6 +12,26 @@ export function validateImageFiles(files) {
   return ''
 }
 
+export function validateVipPosition(values) {
+  if (!values.vip) {
+    return ''
+  }
+
+  const rawPosition = String(values.vip_order ?? '').trim()
+
+  if (rawPosition === '') {
+    return 'VIP position is required when VIP is enabled.'
+  }
+
+  const position = Number(rawPosition)
+
+  if (!Number.isInteger(position) || position < 1) {
+    return 'VIP position must be a positive integer.'
+  }
+
+  return ''
+}
+
 export function removeSelectedFile(values, fieldName, index) {
   const fieldValue = values[fieldName]
 
@@ -100,6 +120,10 @@ export function createMultipartPayload(resource, formValues) {
   const formData = new FormData()
 
   resource.fields.forEach((field) => {
+    if (field.name === 'vip_order' && !formValues.vip) {
+      return
+    }
+
     appendFormDataValue(formData, field, formValues[field.name])
   })
 

@@ -11,6 +11,7 @@ import {
   deleteResourcePhoto,
   fetchResourceItem,
   fetchResourceItems,
+  fetchVips,
   updateResourceItem,
 } from '../services/api.js'
 import {
@@ -18,7 +19,25 @@ import {
   removePhotoById,
   removeSelectedFile,
   validateImageFiles,
+  validateVipPosition,
 } from '../utils/resourceForm.js'
+
+const VIP_PROVIDER_LABELS = {
+  photographer: 'ფოტოგრაფი',
+  videographer: 'ვიდეოგრაფი',
+  band: 'ბენდი',
+  dj: 'დიჯეი',
+  presenter: 'წამყვანი',
+  studio: 'სტუდია',
+}
+
+function sortVips(items) {
+  return [...items].sort(
+    (leftItem, rightItem) =>
+      Number(leftItem?.provider?.vip_order ?? Number.MAX_SAFE_INTEGER) -
+      Number(rightItem?.provider?.vip_order ?? Number.MAX_SAFE_INTEGER),
+  )
+}
 
 function fieldValueToInput(field, value) {
   if (field.type.startsWith('translated-')) {
@@ -83,6 +102,59 @@ function ProviderImage({ src, alt = '', className = '' }) {
       loading="lazy"
       onError={() => setFailedSrc(src)}
     />
+  )
+}
+
+function VipOrderPanel({ items, isLoading, error }) {
+  return (
+    <section className="vip-order-card" aria-labelledby="vip-order-title">
+      <div className="vip-order-head">
+        <div>
+          <h3 id="vip-order-title">VIP order</h3>
+          <p>ყველა კატეგორიის საერთო VIP პოზიციები</p>
+        </div>
+        <span className="vip-order-count">
+          {isLoading ? 'იტვირთება...' : `${items.length} VIP`}
+        </span>
+      </div>
+
+      {error ? <div className="form-error">{error}</div> : null}
+
+      {isLoading ? (
+        <div className="vip-order-empty">VIP სია იტვირთება...</div>
+      ) : items.length === 0 ? (
+        <div className="vip-order-empty">VIP პოზიციები ჯერ არ არის დაკავებული.</div>
+      ) : (
+        <div className="vip-order-list">
+          {items.map((item) => {
+            const provider = item.provider ?? {}
+            const providerType = VIP_PROVIDER_LABELS[item.provider_type] ?? item.provider_type
+            const providerName =
+              getTranslatedValue(provider.name, 'ka') ||
+              getTranslatedValue(provider.name, 'en') ||
+              `${providerType} #${provider.id}`
+
+            return (
+              <article
+                key={`${item.provider_type}-${provider.id}`}
+                className="vip-order-item"
+              >
+                <span className="vip-position-badge">#{provider.vip_order}</span>
+                <ProviderImage
+                  className="vip-provider-image"
+                  src={provider.profile_photo_url}
+                  alt={`${providerName} — ${providerType}`}
+                />
+                <div className="vip-provider-copy">
+                  <span>{providerType}</span>
+                  <strong>{providerName}</strong>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -227,6 +299,7 @@ function ResourceForm({
   resource,
   formValues,
   formError,
+  fieldErrors,
   isSaving,
   deletingPhotoId,
   onChange,
@@ -258,8 +331,16 @@ function ResourceForm({
       <form className="editor-form" onSubmit={onSubmit}>
         <div className="editor-grid">
           {resource.fields.map((field) => {
+            if (field.name === 'vip_order' && !formValues.vip) {
+              return null
+            }
+
             const isWideField =
               field.type.includes('textarea') || field.type === 'list' || field.type === 'files'
+            const rawFieldError = fieldErrors[field.name]
+            const fieldError = Array.isArray(rawFieldError)
+              ? rawFieldError[0]
+              : rawFieldError
 
             if (field.type.startsWith('translated-')) {
               const Input = field.type === 'translated-textarea' ? 'textarea' : 'input'
@@ -354,12 +435,21 @@ function ResourceForm({
                     id={field.name}
                     name={field.name}
                     type={field.type === 'number' ? 'number' : 'text'}
+                    min={field.min}
+                    step={field.step}
                     value={formValues[field.name]}
                     onChange={onChange}
                     placeholder={`შეიყვანეთ ${field.label.toLowerCase()}`}
-                    required={field.required}
+                    required={field.required || (field.name === 'vip_order' && formValues.vip)}
+                    aria-invalid={Boolean(fieldError)}
+                    aria-describedby={fieldError ? `${field.name}-error` : undefined}
                   />
                 )}
+                {fieldError ? (
+                  <p className="field-error" id={`${field.name}-error`} role="alert">
+                    {fieldError}
+                  </p>
+                ) : null}
               </div>
             )
           })}
@@ -419,10 +509,15 @@ function validateTranslatedFields(resource, formValues) {
 function ResourcePage({ resourceKey }) {
   const displayLanguage = 'ka'
   const resource = getResourceDefinition(resourceKey)
+  const supportsVip = resource?.fields.some((field) => field.name === 'vip') ?? false
   const [items, setItems] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [pageError, setPageError] = useState('')
   const [formError, setFormError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [vips, setVips] = useState([])
+  const [isVipsLoading, setIsVipsLoading] = useState(supportsVip)
+  const [vipListError, setVipListError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [pendingPhotoDelete, setPendingPhotoDelete] = useState(null)
@@ -469,6 +564,41 @@ function ResourcePage({ resourceKey }) {
     }
   }, [resource])
 
+  useEffect(() => {
+    if (!supportsVip) {
+      return
+    }
+
+    let isCancelled = false
+
+    async function loadVips() {
+      setIsVipsLoading(true)
+      setVipListError('')
+
+      try {
+        const nextVips = await fetchVips()
+
+        if (!isCancelled) {
+          setVips(sortVips(nextVips))
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setVipListError(error.message)
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsVipsLoading(false)
+        }
+      }
+    }
+
+    loadVips()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [supportsVip, resourceKey])
+
   if (!resource) {
     return null
   }
@@ -483,12 +613,27 @@ function ResourcePage({ resourceKey }) {
   const activeItem = items.find((item) => item.id === activeItemId) ?? null
   const isDeletingPhoto = deletingPhotoId !== null
 
+  async function refreshVipItems() {
+    if (!supportsVip) {
+      return
+    }
+
+    setVipListError('')
+
+    try {
+      setVips(sortVips(await fetchVips()))
+    } catch (error) {
+      setVipListError(error.message)
+    }
+  }
+
   function handleCreateClick() {
     setIsEditorOpen(true)
     setActiveItemId(null)
     setExistingAssets({})
     setFormValues(createInitialFormValues(resource))
     setFormError('')
+    setFieldErrors({})
     setPendingPhotoDelete(null)
     setPhotoDeleteError('')
   }
@@ -545,6 +690,23 @@ function ResourcePage({ resourceKey }) {
   function handleFieldChange(event) {
     const { checked, dataset, files, name, type, value, multiple } = event.target
 
+    setFieldErrors((current) => {
+      const nextErrors = { ...current }
+
+      delete nextErrors[name]
+
+      if (dataset.language) {
+        delete nextErrors[`${name}.${dataset.language}`]
+      }
+
+      if (name === 'vip' && !checked) {
+        delete nextErrors.vip_order
+      }
+
+      return nextErrors
+    })
+    setFormError('')
+
     if (type === 'file') {
       const selectedFiles = Array.from(files ?? [])
       const validationError = validateImageFiles(selectedFiles)
@@ -586,6 +748,7 @@ function ResourcePage({ resourceKey }) {
       setFormValues((current) => ({
         ...current,
         [name]: checked,
+        ...(name === 'vip' && !checked ? { vip_order: '' } : {}),
       }))
       return
     }
@@ -630,6 +793,7 @@ function ResourcePage({ resourceKey }) {
     )
     setFormValues(createFormValues(resource, detailedItem))
     setFormError('')
+    setFieldErrors({})
   }
 
   function handleCloseEditor() {
@@ -638,6 +802,7 @@ function ResourcePage({ resourceKey }) {
     setExistingAssets({})
     setFormValues(createInitialFormValues(resource))
     setFormError('')
+    setFieldErrors({})
   }
 
   async function handleDelete(item) {
@@ -654,6 +819,8 @@ function ResourcePage({ resourceKey }) {
       if (activeItemId === item.id) {
         handleCreateClick()
       }
+
+      await refreshVipItems()
     } catch (error) {
       setPageError(error.message)
     }
@@ -662,14 +829,22 @@ function ResourcePage({ resourceKey }) {
   async function handleSubmit(event) {
     event.preventDefault()
     const validationError = validateTranslatedFields(resource, formValues)
+    const vipPositionError = validateVipPosition(formValues)
 
     if (validationError) {
       setFormError(validationError)
       return
     }
 
+    if (vipPositionError) {
+      setFormError('')
+      setFieldErrors({ vip_order: [vipPositionError] })
+      return
+    }
+
     setIsSaving(true)
     setFormError('')
+    setFieldErrors({})
 
     const payload = createMultipartPayload(resource, formValues)
 
@@ -701,9 +876,13 @@ function ResourcePage({ resourceKey }) {
         return [nextItem, ...current]
       })
 
+      await refreshVipItems()
       handleCloseEditor()
     } catch (error) {
-      setFormError(error.message)
+      const validationErrors = error.validationErrors ?? {}
+
+      setFieldErrors(validationErrors)
+      setFormError(validationErrors.vip_order ? '' : error.message)
     } finally {
       setIsSaving(false)
     }
@@ -724,6 +903,14 @@ function ResourcePage({ resourceKey }) {
       </header>
 
       {pageError ? <div className="form-error page-error">{pageError}</div> : null}
+
+      {supportsVip ? (
+        <VipOrderPanel
+          items={vips}
+          isLoading={isVipsLoading}
+          error={vipListError}
+        />
+      ) : null}
 
       <div className="resource-body">
         <section className="table-card">
@@ -839,6 +1026,7 @@ function ResourcePage({ resourceKey }) {
               resource={resource}
               formValues={formValues}
               formError={formError}
+              fieldErrors={fieldErrors}
               isSaving={isSaving}
               deletingPhotoId={deletingPhotoId}
               onChange={handleFieldChange}

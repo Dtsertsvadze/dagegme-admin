@@ -10,6 +10,7 @@
  *   profile_photo_url?: string | null,
  *   links?: string[],
  *   vip?: boolean,
+ *   vip_order?: number | null,
  *   photos?: GalleryPhoto[],
  *   mark?: string,
  *   model?: string,
@@ -32,6 +33,14 @@ const translatedTextarea = (name, label, options = {}) => ({
 });
 
 const vipField = { name: "vip", label: "VIP", type: "boolean", table: true };
+const vipOrderField = {
+  name: "vip_order",
+  label: "VIP position",
+  type: "number",
+  min: 1,
+  step: 1,
+  table: true,
+};
 
 export const adminResources = [
   {
@@ -44,6 +53,7 @@ export const adminResources = [
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
       vipField,
+      vipOrderField,
       {
         name: "profile_photo",
         label: "პროფილის ფოტო",
@@ -71,6 +81,7 @@ export const adminResources = [
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
       vipField,
+      vipOrderField,
       {
         name: "profile_photo",
         label: "პროფილის ფოტო",
@@ -91,6 +102,7 @@ export const adminResources = [
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
       vipField,
+      vipOrderField,
       {
         name: "profile_photo",
         label: "პროფილის ფოტო",
@@ -117,6 +129,7 @@ export const adminResources = [
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
       vipField,
+      vipOrderField,
       {
         name: "profile_photo",
         label: "პროფილის ფოტო",
@@ -137,6 +150,7 @@ export const adminResources = [
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
       vipField,
+      vipOrderField,
       {
         name: "profile_photo",
         label: "პროფილის ფოტო",
@@ -156,6 +170,7 @@ export const adminResources = [
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
       vipField,
+      vipOrderField,
       {
         name: "profile_photo",
         label: "პროფილის ფოტო",
