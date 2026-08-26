@@ -22,7 +22,6 @@ export interface ProviderRecord {
   id: number
   name?: Translation
   description?: Translation | null
-  city: Translation
   profile_photo: string | null
   profile_photo_url: string | null
   links?: string[]
@@ -36,7 +35,6 @@ export interface ProviderRecord {
 export interface ProviderFormValues {
   name?: Translation
   description?: Translation
-  city: Translation
   profile_photo: SelectedImageFile | null
   links?: string
   vip?: boolean

@@ -6,7 +6,6 @@
  *   id: number,
  *   name?: Translation,
  *   description?: Translation | null,
- *   city?: Translation,
  *   profile_photo?: string | null,
  *   profile_photo_url?: string | null,
  *   links?: string[],
@@ -44,7 +43,6 @@ export const adminResources = [
     titleField: "name",
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
-      translatedText("city", "ქალაქი", { required: true, table: true }),
       vipField,
       {
         name: "profile_photo",
@@ -72,7 +70,6 @@ export const adminResources = [
     titleField: "name",
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
-      translatedText("city", "ქალაქი", { required: true, table: true }),
       vipField,
       {
         name: "profile_photo",
@@ -93,7 +90,6 @@ export const adminResources = [
     titleField: "name",
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
-      translatedText("city", "ქალაქი", { required: true, table: true }),
       vipField,
       {
         name: "profile_photo",
@@ -114,7 +110,6 @@ export const adminResources = [
     titleField: "name",
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
-      translatedText("city", "ქალაქი", { required: true, table: true }),
       vipField,
       {
         name: "profile_photo",
@@ -135,7 +130,6 @@ export const adminResources = [
     titleField: "name",
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
-      translatedText("city", "ქალაქი", { required: true, table: true }),
       vipField,
       {
         name: "profile_photo",
@@ -155,7 +149,6 @@ export const adminResources = [
     titleField: "name",
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
-      translatedText("city", "ქალაქი", { required: true, table: true }),
       vipField,
       {
         name: "profile_photo",
@@ -194,7 +187,6 @@ export const adminResources = [
         required: true,
         table: true,
       },
-      translatedText("city", "ქალაქი", { required: true, table: true }),
       {
         name: "profile_photo",
         label: "პროფილის ფოტო",

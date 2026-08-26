@@ -31,7 +31,6 @@ function rentalCarValues() {
       mark: 'Mercedes-Benz',
       model: 'E-Class',
       year: '2024',
-      city: { en: 'Tbilisi', ka: 'თბილისი' },
     },
   }
 }
@@ -96,8 +95,6 @@ test('create payload sends the profile image and every gallery image with Larave
   assert.equal(payload.get('model'), 'E-Class')
   assert.equal(payload.get('mark'), 'Mercedes-Benz')
   assert.equal(payload.get('year'), '2024')
-  assert.equal(payload.get('city[en]'), 'Tbilisi')
-  assert.equal(payload.get('city[ka]'), 'თბილისი')
   assert.equal(payload.get('profile_photo'), profilePhoto)
   assert.deepEqual(payload.getAll('photos[]'), [firstGalleryPhoto, secondGalleryPhoto])
   assert.equal(payload.has('replace_photos'), false)
