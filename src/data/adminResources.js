@@ -147,11 +147,11 @@ export const adminResources = [
     ],
   },
   {
-    key: "halls",
+    key: "studios",
     label: "სტუდიები",
     singularLabel: "სტუდია",
-    publicPath: "/halls",
-    adminPath: "/admin/halls",
+    publicPath: "/studios",
+    adminPath: "/admin/studios",
     titleField: "name",
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),

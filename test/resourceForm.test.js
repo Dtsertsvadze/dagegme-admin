@@ -62,8 +62,8 @@ test('DJs expose a bilingual description field and include it in the payload', (
   assert.equal(payload.get('description[ka]'), 'ქართული აღწერა')
 })
 
-test('DJs, presenters, and halls expose VIP controls and serialize their status', () => {
-  for (const resourceKey of ['djs', 'presenters', 'halls']) {
+test('DJs, presenters, and studios expose VIP controls and serialize their status', () => {
+  for (const resourceKey of ['djs', 'presenters', 'studios']) {
     const resource = getResourceDefinition(resourceKey)
     const vipField = resource.fields.find((field) => field.name === 'vip')
     const values = createInitialFormValues(resource)
