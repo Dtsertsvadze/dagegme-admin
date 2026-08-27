@@ -221,6 +221,7 @@ export const adminResources = [
         accept: "image/*",
         table: true,
       },
+      translatedTextarea("description", "აღწერა"),
       {
         name: "photos",
         label: "გალერეის ფოტოები",

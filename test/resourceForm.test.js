@@ -76,6 +76,21 @@ test('DJs expose a bilingual description field and include it in the payload', (
   assert.equal(payload.get('description[ka]'), 'ქართული აღწერა')
 })
 
+test('rental cars expose a bilingual description field and include it in the payload', () => {
+  const resource = getResourceDefinition('rental-cars')
+  const descriptionField = resource.fields.find((field) => field.name === 'description')
+  const values = createInitialFormValues(resource)
+  const payload = createMultipartPayload(resource, {
+    ...values,
+    description: { en: 'English description', ka: 'ქართული აღწერა' },
+  })
+
+  assert.equal(descriptionField.type, 'translated-textarea')
+  assert.deepEqual(values.description, { en: '', ka: '' })
+  assert.equal(payload.get('description[en]'), 'English description')
+  assert.equal(payload.get('description[ka]'), 'ქართული აღწერა')
+})
+
 test('all providers except rental cars expose VIP position controls', () => {
   for (const resourceKey of [
     'photographers',
