@@ -32,6 +32,43 @@ export function validateVipPosition(values) {
   return ''
 }
 
+export function validateSortOrder(values) {
+  const rawOrder = String(values.sort_order ?? '').trim()
+
+  if (rawOrder === '') {
+    return ''
+  }
+
+  const order = Number(rawOrder)
+
+  if (!Number.isInteger(order) || order < 1) {
+    return 'Sort order must be a positive integer.'
+  }
+
+  return ''
+}
+
+export function sortItemsBySortOrder(items) {
+  const normalizedOrder = (item) => {
+    const value = item?.sort_order
+
+    return value === null || value === undefined || value === ''
+      ? Number.POSITIVE_INFINITY
+      : Number(value)
+  }
+
+  return [...items].sort((leftItem, rightItem) => {
+    const leftOrder = normalizedOrder(leftItem)
+    const rightOrder = normalizedOrder(rightItem)
+
+    if (leftOrder === rightOrder) {
+      return 0
+    }
+
+    return leftOrder - rightOrder
+  })
+}
+
 export function removeSelectedFile(values, fieldName, index) {
   const fieldValue = values[fieldName]
 
@@ -103,7 +140,11 @@ function appendFormDataValue(formData, field, value) {
   }
 
   if (field.type === 'number') {
-    if (value !== '') {
+    if (value === '' || value === null || value === undefined) {
+      if (field.sendEmpty) {
+        formData.append(field.name, '')
+      }
+    } else {
       formData.append(field.name, String(Number(value)))
     }
     return

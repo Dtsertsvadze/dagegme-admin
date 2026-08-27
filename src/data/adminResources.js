@@ -9,6 +9,7 @@
  *   profile_photo?: string | null,
  *   profile_photo_url?: string | null,
  *   links?: string[],
+ *   sort_order?: number | null,
  *   vip?: boolean,
  *   vip_order?: number | null,
  *   photos?: GalleryPhoto[],
@@ -32,6 +33,16 @@ const translatedTextarea = (name, label, options = {}) => ({
   ...options,
 });
 
+const sortOrderField = {
+  name: "sort_order",
+  label: "Sort order",
+  type: "number",
+  min: 1,
+  step: 1,
+  table: true,
+  sendEmpty: true,
+  help: "არასავალდებულო. მცირე რიცხვები გამოჩნდება პირველად, ცარიელი მნიშვნელობები — ბოლოს.",
+};
 const vipField = { name: "vip", label: "VIP", type: "boolean", table: true };
 const vipOrderField = {
   name: "vip_order",
@@ -52,6 +63,7 @@ export const adminResources = [
     titleField: "name",
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
+      sortOrderField,
       vipField,
       vipOrderField,
       {
@@ -80,6 +92,7 @@ export const adminResources = [
     titleField: "name",
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
+      sortOrderField,
       vipField,
       vipOrderField,
       {
@@ -101,6 +114,7 @@ export const adminResources = [
     titleField: "name",
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
+      sortOrderField,
       vipField,
       vipOrderField,
       {
@@ -128,6 +142,7 @@ export const adminResources = [
     titleField: "name",
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
+      sortOrderField,
       vipField,
       vipOrderField,
       {
@@ -149,6 +164,7 @@ export const adminResources = [
     titleField: "name",
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
+      sortOrderField,
       vipField,
       vipOrderField,
       {
@@ -169,6 +185,7 @@ export const adminResources = [
     titleField: "name",
     fields: [
       translatedText("name", "სახელი", { required: true, table: true }),
+      sortOrderField,
       vipField,
       vipOrderField,
       {
@@ -214,6 +231,7 @@ export const adminResources = [
         required: true,
         table: true,
       },
+      sortOrderField,
       {
         name: "profile_photo",
         label: "პროფილის ფოტო",

@@ -18,7 +18,9 @@ import {
   createMultipartPayload,
   removePhotoById,
   removeSelectedFile,
+  sortItemsBySortOrder,
   validateImageFiles,
+  validateSortOrder,
   validateVipPosition,
 } from '../utils/resourceForm.js'
 
@@ -450,6 +452,7 @@ function ResourceForm({
                     {fieldError}
                   </p>
                 ) : null}
+                {field.help ? <p className="field-help">{field.help}</p> : null}
               </div>
             )
           })}
@@ -544,7 +547,7 @@ function ResourcePage({ resourceKey }) {
         const nextItems = await fetchResourceItems(resource)
 
         if (!isCancelled) {
-          setItems(nextItems)
+          setItems(sortItemsBySortOrder(nextItems))
         }
       } catch (error) {
         if (!isCancelled) {
@@ -830,6 +833,7 @@ function ResourcePage({ resourceKey }) {
     event.preventDefault()
     const validationError = validateTranslatedFields(resource, formValues)
     const vipPositionError = validateVipPosition(formValues)
+    const sortOrderError = validateSortOrder(formValues)
 
     if (validationError) {
       setFormError(validationError)
@@ -839,6 +843,12 @@ function ResourcePage({ resourceKey }) {
     if (vipPositionError) {
       setFormError('')
       setFieldErrors({ vip_order: [vipPositionError] })
+      return
+    }
+
+    if (sortOrderError) {
+      setFormError('')
+      setFieldErrors({ sort_order: [sortOrderError] })
       return
     }
 
@@ -870,10 +880,12 @@ function ResourcePage({ resourceKey }) {
 
       setItems((current) => {
         if (activeItem) {
-          return current.map((item) => (item.id === activeItem.id ? nextItem : item))
+          return sortItemsBySortOrder(
+            current.map((item) => (item.id === activeItem.id ? nextItem : item)),
+          )
         }
 
-        return [nextItem, ...current]
+        return sortItemsBySortOrder([nextItem, ...current])
       })
 
       await refreshVipItems()
@@ -882,7 +894,11 @@ function ResourcePage({ resourceKey }) {
       const validationErrors = error.validationErrors ?? {}
 
       setFieldErrors(validationErrors)
-      setFormError(validationErrors.vip_order ? '' : error.message)
+      setFormError(
+        validationErrors.vip_order || validationErrors.sort_order
+          ? ''
+          : error.message,
+      )
     } finally {
       setIsSaving(false)
     }

@@ -14,7 +14,9 @@ import {
   createMultipartPayload,
   removePhotoById,
   removeSelectedFile,
+  sortItemsBySortOrder,
   validateImageFiles,
+  validateSortOrder,
   validateVipPosition,
 } from '../src/utils/resourceForm.js'
 
@@ -138,12 +140,70 @@ test('all providers except rental cars expose VIP position controls', () => {
   assert.equal(rentalCar.fields.some((field) => field.name === 'vip_order'), false)
 })
 
+test('all resources expose an optional sort order and include it in the payload', () => {
+  for (const resourceKey of [
+    'photographers',
+    'videographers',
+    'bands',
+    'djs',
+    'presenters',
+    'studios',
+    'rental-cars',
+  ]) {
+    const resource = getResourceDefinition(resourceKey)
+    const sortOrderField = resource.fields.find((field) => field.name === 'sort_order')
+    const values = createInitialFormValues(resource)
+
+    assert.equal(sortOrderField.type, 'number')
+    assert.equal(sortOrderField.min, 1)
+    assert.equal(sortOrderField.step, 1)
+    assert.equal(sortOrderField.table, true)
+    assert.equal(sortOrderField.required, undefined)
+    assert.equal(values.sort_order, '')
+    assert.equal(
+      createMultipartPayload(resource, { ...values, sort_order: '3' }).get('sort_order'),
+      '3',
+    )
+    assert.equal(createMultipartPayload(resource, values).get('sort_order'), '')
+  }
+})
+
 test('VIP position validation requires positive integers only while VIP is enabled', () => {
   assert.equal(validateVipPosition({ vip: false, vip_order: '' }), '')
   assert.match(validateVipPosition({ vip: true, vip_order: '' }), /required/)
   assert.match(validateVipPosition({ vip: true, vip_order: '0' }), /positive integer/)
   assert.match(validateVipPosition({ vip: true, vip_order: '1.5' }), /positive integer/)
   assert.equal(validateVipPosition({ vip: true, vip_order: '1' }), '')
+})
+
+test('sort order validation accepts empty or positive integers', () => {
+  assert.equal(validateSortOrder({ sort_order: '' }), '')
+  assert.match(validateSortOrder({ sort_order: '0' }), /positive integer/)
+  assert.match(validateSortOrder({ sort_order: '-1' }), /positive integer/)
+  assert.match(validateSortOrder({ sort_order: '1.5' }), /positive integer/)
+  assert.equal(validateSortOrder({ sort_order: '1' }), '')
+})
+
+test('sort order puts lower values first, preserves duplicates, and leaves unordered items last', () => {
+  const firstDuplicate = { id: 2, sort_order: 1 }
+  const secondDuplicate = { id: 3, sort_order: 1 }
+  const items = [
+    { id: 1, sort_order: null },
+    firstDuplicate,
+    { id: 4, sort_order: 3 },
+    secondDuplicate,
+    { id: 5 },
+    { id: 6, sort_order: 2 },
+  ]
+
+  assert.deepEqual(sortItemsBySortOrder(items), [
+    firstDuplicate,
+    secondDuplicate,
+    items[5],
+    items[2],
+    items[0],
+    items[4],
+  ])
 })
 
 test('create payload sends the profile image and every gallery image with Laravel keys', () => {

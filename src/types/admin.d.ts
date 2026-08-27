@@ -27,6 +27,7 @@ export interface ProviderRecord {
   profile_photo: string | null
   profile_photo_url: string | null
   links?: string[]
+  sort_order?: number | null
   vip?: boolean
   vip_order?: number | null
   photos?: GalleryPhoto[]
@@ -40,6 +41,7 @@ export interface ProviderFormValues {
   description?: Translation
   profile_photo: SelectedImageFile | null
   links?: string
+  sort_order?: number | string
   vip?: boolean
   vip_order?: number | string
   photos?: SelectedImageFile[]
